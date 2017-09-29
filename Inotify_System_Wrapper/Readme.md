@@ -2,8 +2,8 @@ Inotify Wrapper API
 
 some quick tips 
 
-1) Install boost on your system ...
-			sudo apt-get install libboost-all-dev  
+1) Install boost on your system ...<br>
+			sudo apt-get install libboost-all-dev  <br>
       
 Installation...
   1) Compile (without linking) the SharedObjects/src/InotifyLib.cpp
