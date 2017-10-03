@@ -241,7 +241,7 @@ int initializeInotify_onCreateFileCreateNewWatchDecriptorFeature_enabled(char *p
     }
     onCreateFileCreateNewWatchDecriptorFeature=true;
     initializeInotify(path);
-    return 1;
+    return 0;
 }
 /***
  *
