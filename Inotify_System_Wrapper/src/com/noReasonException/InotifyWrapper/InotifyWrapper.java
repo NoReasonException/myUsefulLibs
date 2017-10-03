@@ -11,18 +11,21 @@ package com.noReasonException.InotifyWrapper;
  * 1) no look current directory.....                                        SOLVED                  fixed on master                 in initializeInotify BFS Algorithm
  * 2)invalid string pass in parameter #1 of initializeInotify               SOLVED                  fixed on master                 use env->GetArrayLength instead of standard strlen
  * 3)invalid string returned by getLastModifiedFile()                       SOLVED                  fixed on master                 make buffer global , use posix_memalign for aligment
- * 4)Throw a boost C++ Exception in invalid path (Instead of java one)      PENDING TO VER 0.2                              -
+ * 4)Throw a boost C++ Exception in invalid path (Instead of java one)      PENDING
+ * 5)the getLastModifiedFile returns only the name , not the relative path  PENDING
+ * 6)the isBad() return bad status , in case of using the feature 3         SOLVED                  Ftr3                            check the initializeInotify_onCreateFileCreateNewWatchDecriptorFeature_enabled() func
  */
 /***
  * Features i want to add on VER 0.2
- * Description                                                                                      BranchName              Status
- * 1)Pass in constructor the type of event i want to watch (now is simply all!)                        -                    PENDING TO VER 0.2
- * 2)Wrapper to native call getLastModifiedFile so to return a java.lang.String                        -                    PENDING TO VER 0.2
- * 3)When we Create an new file,if this feature is selected , add a watch descriptor automatically     Ftr3                 Coding Process...
+ * Description                                                                                          BranchName              Status                          Notes...
+ * 1)Pass in constructor the type of event i want to watch (now is simply all!)                         -                       PENDING
+ * 2)Wrapper to native call getLastModifiedFile so to return a java.lang.String                         -                       PENDING
+ * 3)When we Create an new file,if this feature is selected , add a watch descriptor automatically      Ftr3                    READY                           i forgot to switch to Ftr3 , so the major job is done on master , in "Feature 3: Commit...
  */
 
 
 import java.io.IOException;
+import java.util.Scanner;
 
 /***
  * Enum ModifiedType
@@ -56,25 +59,40 @@ enum ModifiedType{
  * Class InotifyNative , A wrapper to InotifySystem
 */
 public class InotifyWrapper {
+    private boolean bad=false;
     private native int      initializeInotify(byte path[]);                 //called from constructor
-    public native int       waitForFileEvent();                             //block until something happen (read() syscall blocks)
-    public native byte []   getLastModifiedFile() throws IOException;       //get path of last modified file
-    public native int       getLastModifiedType();                          //get type of event for last modified file !
+    private native int      initializeInotify_onCreateFileCreateNewWatchDecriptorFeature_enabled(byte path[]);
+    public  native int       waitForFileEvent();                             //block until something happen (read() syscall blocks)
+    public  native byte []   getLastModifiedFile() throws IOException;       //get path of last modified file
+    public  native int       getLastModifiedType();                          //get type of event for last modified file !
     static{
         Runtime.getRuntime().loadLibrary("InotifyNative");
     }
-    public static void main(String args[])throws InterruptedException,IOException{
-        InotifyWrapper wr = new InotifyWrapper("./Test");
-        System.out.print(wr.waitForFileEvent());
-        System.out.print("->>>>"+new String(wr.getLastModifiedFile()));
-        int type = wr.getLastModifiedType();
-        if((type|ModifiedType.IN_DELETE.getMask())==1) {
-            System.out.print("IN CLOSE WRITE EVENT");
+    public InotifyWrapper(java.lang.String pathToWatch,boolean onCreateWatchDirectory){
+        if(onCreateWatchDirectory){
+            if(this.initializeInotify_onCreateFileCreateNewWatchDecriptorFeature_enabled(pathToWatch.getBytes())!=0){
+                this.bad=true;
+            }
+        }
+        else{
+            if(this.initializeInotify(pathToWatch.getBytes())!=0){
+                this.bad=true;
+            }
         }
     }
-    public InotifyWrapper(java.lang.String pathToWatch){
-        this.initializeInotify(pathToWatch.getBytes());
+    public boolean isBad(){
+        return this.bad;
     }
+    public static void main(String args[]) throws IOException{
+        InotifyWrapper wr = new InotifyWrapper("../",true);
+        if(wr.isBad()){
+            throw new IllegalArgumentException();
+        }
+        wr.waitForFileEvent();
+        System.out.print(new String(wr.getLastModifiedFile()));
+    }
+
+
 
 
 
