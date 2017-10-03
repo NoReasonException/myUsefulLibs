@@ -17,6 +17,14 @@ JNIEXPORT jint JNICALL Java_com_noReasonException_InotifyWrapper_InotifyWrapper_
 
 /*
  * Class:     com_noReasonException_InotifyWrapper_InotifyWrapper
+ * Method:    initializeInotify_onCreateFileCreateNewWatchDecriptorFeature_enabled
+ * Signature: ([B)I
+ */
+JNIEXPORT jint JNICALL Java_com_noReasonException_InotifyWrapper_InotifyWrapper_initializeInotify_1onCreateFileCreateNewWatchDecriptorFeature_1enabled
+  (JNIEnv *, jobject, jbyteArray);
+
+/*
+ * Class:     com_noReasonException_InotifyWrapper_InotifyWrapper
  * Method:    waitForFileEvent
  * Signature: ()I
  */

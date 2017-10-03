@@ -4,6 +4,7 @@
  * @date 26-10-2017
  * @version 1
  */
+#include <boost/filesystem.hpp>
 
 #include <sys/inotify.h>
 #include <iostream>
@@ -12,20 +13,35 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <poll.h>
-#include <boost/filesystem.hpp>
 #include <queue>
+#include <sstream>
+
+/**
+ * Debug macros....
+ */
+#define DEBUGv(str,...) if(debug)printf(str"\n",__VA_ARGS__)    //DEBUG with printf-format parameters
+#define DEBUGp(str) if(debug)perror(str)                        //DEBUG wrapper around perror()
+#define DEBUG(str) if(debug)printf(str"\n")
+
+/**
+ *
+ * Forward Declarations....
+ */
+int addInotifyWatchToFolder(char *path);
+int ifFolderAddWatch(std::string fullPath);
+
 
 using namespace boost::filesystem;
+
+
 //Global Variables (Linked as native references on java )
 int debug=0;
 int isInitialized=0;
 std::queue<char *> FileNamesModified;
 std::queue<int>     TypeOfModification;
-//char buff[4096]__attribute__ ((aligned(__alignof__(struct inotify_event))));
 char *buff;
-#define DEBUGv(str,...) if(debug)printf(str"\n",__VA_ARGS__)    //DEBUG with printf-format parameters
-#define DEBUGp(str) if(debug)perror(str)                        //DEBUG wrapper around perror()
-#define DEBUG(str) if(debug)printf(str"\n")                     //DEBUG simple printin message
+bool onCreateFileCreateNewWatchDecriptorFeature = false;
+               //DEBUG simple printin message
 
 /***
  * typedef struct DetectedDirectories as Directories_t
@@ -44,10 +60,13 @@ typedef struct DetectedDirectories{
 typedef struct inotifyWrapperInfoStruct{
     int     notifyFileDescriptor;                     //Inotify File Descriptor
     nfds_t  numberOfWatchDescriptors;                //Number of watch descriptors in array coming..
-    int *   watchDescriptors;                       //watchDescriptors Array (uninitialized)
+    std::vector<int>  watchDescriptors;                       //watchDescriptors vector...
 }InotifyInfo_t;
 InotifyInfo_t *GlobalInotifyInfo;
+Directories_t*directories;
 Directories_t*DetectDirectories_recv(boost::filesystem::path &path,Directories_t*retval) __attribute_deprecated__; //forward Declarations
+std::string getPathFromEvent(struct inotify_event *ptr);
+
 Directories_t*allocDetectedDirectoriesStruct();
 InotifyInfo_t*allocInotifyInfo_t(nfds_t);
 
@@ -132,13 +151,52 @@ Directories_t*allocDetectedDirectoriesStruct(){
 InotifyInfo_t*allocInotifyInfo_t(nfds_t DirectoriesToWatch){
     InotifyInfo_t*ptr=new InotifyInfo_t;
     ptr->numberOfWatchDescriptors=DirectoriesToWatch;
-    ptr->watchDescriptors=(int *)malloc(sizeof(int)*DirectoriesToWatch);
-    if(ptr->watchDescriptors==NULL)   return NULL;
+    //ptr->watchDescriptors=(int *)malloc(sizeof(int)*DirectoriesToWatch);
     ptr->notifyFileDescriptor=inotify_init();
     if(ptr->notifyFileDescriptor==-1) return NULL;
     return ptr;
 
 
+}
+
+/***
+ * Waits for any I/O ...
+ * @return 0 on success , -1 on error ...
+ *
+ * @Note
+ *      Possible Errors ..
+ *              1) in case of non initialized library , you must call initializeInotify() first
+ *              2) if Len syscall return -1;
+ */
+int waitForFileEvent(){
+    if(!isInitialized){
+        DEBUG("[ERR]You must initialize the library first !,call initializeInotify(char * path)");
+        return -1;
+    }
+    struct inotify_event *event;
+    ssize_t len;
+    int mask;
+    char *ptr;
+    DEBUG("Blocking until detect any I/O...");
+    if((len=read(GlobalInotifyInfo->notifyFileDescriptor,buff,4096))<0){
+        DEBUG("[FATAL_ERR]I/O read() syscall encountered an error .... ");
+        return -1;
+    }
+    DEBUG("I/O Detected ....");
+    for(ptr=buff;ptr<buff+len;ptr+=(sizeof(struct inotify_event)+event->len)){
+        event=(struct inotify_event *)ptr;
+        std::string fullpath = getPathFromEvent(event);
+        char *tmp = (char *)malloc(event->len);
+        memcpy(tmp,event->name,event->len);
+        FileNamesModified.push(tmp);
+        mask=event->mask;
+        TypeOfModification.push(mask);
+        if(mask&IN_CREATE and ifFolderAddWatch(fullpath)){
+            DEBUGv("[Directory] %s , Created and prepare for listening ...",fullpath.c_str());
+        }
+
+    }
+    return 1;
 }
 /***
  *      bool initializeInotify(char path[]){
@@ -146,7 +204,7 @@ InotifyInfo_t*allocInotifyInfo_t(nfds_t DirectoriesToWatch){
  *              0           Success
  *              -1          Error(See StdErr)
  * @brief
- *          Allocates and initializes a new InotifyInfo_t struct
+ *          Initialize The library
  *
  */
 int initializeInotify(char path[]){
@@ -155,49 +213,47 @@ int initializeInotify(char path[]){
         return -1;//NOZERO ON ERROR
     }
     boost::filesystem::path p(path);
-    Directories_t*directories=DetectDirectories(p);
+    directories=DetectDirectories(p);
     DEBUGv("Directories founded %d",directories->DetectedDirectories.size());
     if(__builtin_expect((GlobalInotifyInfo=allocInotifyInfo_t(directories->DetectedDirectories.size()))==NULL,0)){ //if unlikely the caller return error
         return -1;
     }
     DEBUG("Inotify Info Struct initialized Successfully");
     for (int i=0;i<directories->DetectedDirectories.size();i++) {
-        GlobalInotifyInfo->watchDescriptors[i]=inotify_add_watch(GlobalInotifyInfo->notifyFileDescriptor,directories->DetectedDirectories[i].string().c_str(),IN_ACCESS|IN_ATTRIB|IN_CLOSE_WRITE|IN_CLOSE_NOWRITE|IN_CREATE|IN_DELETE_SELF|IN_MODIFY|IN_MOVE_SELF|IN_MOVED_FROM|IN_MOVED_TO|IN_OPEN);
+        if(addInotifyWatchToFolder(const_cast<char *>(directories->DetectedDirectories[i].string().c_str()))){
+            DEBUGv("[Directory] %s , FAIL TO LISTEN , CHECK PERMISSIONS ...",directories->DetectedDirectories[i].string().c_str());
+            return -1;
+        }
         DEBUGv("[Directory] %s , Prepare for listening ...",directories->DetectedDirectories[i].string().c_str());
     }
-    DEBUG("All Listeners is set up and waiting....");
+    DEBUG("All Listeners is set up...");
     isInitialized=1;
     return 0;
 
 }
-//recheck tomorrow
-int waitForFileEvent(){
-    if(!isInitialized)return -1;
-    struct inotify_event *event;
-    ssize_t len;
-    int mask;
-    char *ptr;
-    len=read(GlobalInotifyInfo->notifyFileDescriptor,buff,4096);
-
-    for(ptr=buff;ptr<buff+len;ptr+=(sizeof(struct inotify_event)+event->len)){
-        event=(struct inotify_event *)ptr;
-
-        if (event->mask & IN_MODIFY)
-            printf("Modified: ");
-        if (event->mask & IN_CLOSE_NOWRITE)
-            printf("IN_CLOSE_NOWRITE: ");
-        if (event->mask & IN_CLOSE_WRITE)
-            printf("IN_CLOSE_WRITE: ");
-        char *tmp = (char *)malloc(event->len);
-        memcpy(tmp,event->name,event->len);
-
-        FileNamesModified.push(tmp);
-        mask=event->mask;
-        TypeOfModification.push(mask);
-
-
+/*
+ * Same as the initializeInotify
+ */
+int initializeInotify_onCreateFileCreateNewWatchDecriptorFeature_enabled(char *path){
+    if(isInitialized){
+        DEBUG("[ERR]Already initialized");
+        return -1;
     }
+    onCreateFileCreateNewWatchDecriptorFeature=true;
+    initializeInotify(path);
     return 1;
+}
+/***
+ *
+ * @param path
+ * @return 0 to success , !0 on error , (see list below...)
+ *
+ */
+int addInotifyWatchToFolder(char *path){
+    int descriptorTemp=inotify_add_watch(GlobalInotifyInfo->notifyFileDescriptor,path,IN_ALL_EVENTS);
+    if(descriptorTemp<0)return descriptorTemp;
+    GlobalInotifyInfo->watchDescriptors.push_back(descriptorTemp);
+    return 0;
 }
 /***
  *
@@ -215,6 +271,28 @@ int getLastModifiedType(){
     TypeOfModification.pop();
     return retval;
 }
+int ifFolderAddWatch(std::string fullPath) {
+    if (!onCreateFileCreateNewWatchDecriptorFeature)return 0;
+    if (!boost::filesystem::is_directory(path(fullPath))) {
+        return 0;
+    }
+    int tempDescriptor = 0;
+    tempDescriptor = inotify_add_watch(GlobalInotifyInfo->notifyFileDescriptor, fullPath.c_str(), IN_ALL_EVENTS);
+    if (tempDescriptor < 0)return -1;
+    GlobalInotifyInfo->watchDescriptors.push_back(tempDescriptor);
+    directories->DetectedDirectories.push_back(std::string(fullPath));
+    return 1;
+
+}
+std::string getPathFromEvent(struct inotify_event *ptr){
+    std::stringstream builder ;
+    builder<<directories->DetectedDirectories.operator[](ptr->wd-1).string();
+    if(ptr->wd>1){
+        builder<<"/";
+    }
+    builder<<ptr->name;
+    return std::string(builder.str());
+}
 /***
  *
  * @param argc
@@ -222,24 +300,8 @@ int getLastModifiedType(){
  * @return
  */
 int main(){}
-/***
-int main(int argc,char *argv[]) {
-    if(argc>1 and !strcmp(argv[1],"--Debug")){
-        debug=1;
-        printf("Inotify Wrapper (--Debug) Started...\n");
-    }
-    if(!initializeInotify((char *)"../")){
-        DEBUGp("Inotify Info Struct Corrupted");
-
-    }
-    isInitialized=1;
-    waitForFileEvent();
-    std::cout<<getLastModifiedFile();
-    return 0;
-
-}
 
 
 
 
-**/
+

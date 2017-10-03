@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 extern int initializeInotify(char path[]);
+extern int initializeInotify_onCreateFileCreateNewWatchDecriptorFeature_enabled(char *path);
 extern char *getLastModifiedFile();
 extern int waitForFileEvent();
 extern int getLastModifiedType();
@@ -17,6 +18,17 @@ JNIEXPORT jint JNICALL Java_com_noReasonException_InotifyWrapper_InotifyWrapper_
     free(b);                                            //Free temp buffer
     env->ReleaseByteArrayElements(path,a,JNI_ABORT);    //Release path object
 
+    return retval;
+}
+JNIEXPORT jint JNICALL Java_com_noReasonException_InotifyWrapper_InotifyWrapper_initializeInotify_1onCreateFileCreateNewWatchDecriptorFeature_1enabled(JNIEnv *env, jobject thiz, jbyteArray path){
+    jbyte *a = env->GetByteArrayElements(path,NULL);
+    int len = env->GetArrayLength(path);
+    char *b = (char *)malloc(len+1);
+    memcpy(b,a,len);
+    b[len]='\0';
+    int retval=initializeInotify_onCreateFileCreateNewWatchDecriptorFeature_enabled(b);
+    free(b);
+    env->ReleaseByteArrayElements(path,a,JNI_ABORT);
     return retval;
 }
 JNIEXPORT jint JNICALL Java_com_noReasonException_InotifyWrapper_InotifyWrapper_waitForFileEvent(JNIEnv *, jobject){
