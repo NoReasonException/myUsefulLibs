@@ -7,19 +7,20 @@ package com.noReasonException.InotifyWrapper;
  */
 /***
  * Known Bugs
- * Symptom                                                                  Status                      Solution
- * 1) no look current directory.....                                        SOLVED                      in initializeInotify BFS Algorithm
- * 2)invalid string pass in parameter #1 of initializeInotify               SOLVED                      use env->GetArrayLength instead of standard strlen
- * 3)invalid string returned by getLastModifiedFile()                       SOLVED                      make buffer global , use posix_memalign for aligment
+ * Symptom                                                                  Status                  BranchName                      Solution
+ * 1) no look current directory.....                                        SOLVED                  fixed on master                 in initializeInotify BFS Algorithm
+ * 2)invalid string pass in parameter #1 of initializeInotify               SOLVED                  fixed on master                 use env->GetArrayLength instead of standard strlen
+ * 3)invalid string returned by getLastModifiedFile()                       SOLVED                  fixed on master                 make buffer global , use posix_memalign for aligment
  * 4)Throw a boost C++ Exception in invalid path (Instead of java one)      PENDING TO VER 0.2                              -
  */
 /***
  * Features i want to add on VER 0.2
- * Description                                                                          Status
- * 1)Pass in constructor the type of event i want to watch (now is simply all!)         PENDING TO VER 0.2
- * 2)Wrapper to native call getLastModifiedFile so to return a java.lang.String         PENDING TO VER 0.2
- * 3)
+ * Description                                                                                      BranchName              Status
+ * 1)Pass in constructor the type of event i want to watch (now is simply all!)                        -                    PENDING TO VER 0.2
+ * 2)Wrapper to native call getLastModifiedFile so to return a java.lang.String                        -                    PENDING TO VER 0.2
+ * 3)When we Create an new file,if this feature is selected , add a watch descriptor automatically     Ftr3                 Coding Process...
  */
+
 
 import java.io.IOException;
 
