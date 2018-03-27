@@ -12,6 +12,10 @@ public class LinkedListSymbolTable <Key extends Comparable<Key>,Value> extends A
     Node<Key,Value> lastEdited;
     int  size=0;
 
+
+    public Node<Key, Value> getHead() {
+        return head;
+    }
     /***
      * Utillity method , gets the key , return the node of the list!
      * @param k the key to search
@@ -62,10 +66,14 @@ public class LinkedListSymbolTable <Key extends Comparable<Key>,Value> extends A
 
     @Override
     public void put (Key key, Value val){
-        if(head==null)head=lastEdited=new Node<Key,Value>(key,val);
+        size+=1;
+
+        if(head==null){
+            head=lastEdited=new Node<Key,Value>(key,val);
+            return;
+        }
         else if((lastEdited=getNode(key))!=null)lastEdited.value=val;
         else head=head.addFrontOf(lastEdited=new Node<Key,Value>(key,val));
-        size+=1;
 
     }
     @Override
@@ -98,36 +106,6 @@ public class LinkedListSymbolTable <Key extends Comparable<Key>,Value> extends A
 
 
 }
-class Node<Key extends Comparable<Key>,Value>{
-    Key     key;
-    Value   value;
-    Node    next;
-    Node    prev;
-    public Node(Key key, Value value) {
-        this.key = key;
-        this.value = value;
 
-    }
-    public Node<Key,Value> goNext(){return this.next;}
-    public Node<Key,Value> goPrev(){return this.prev;}
-
-    public Node<Key,Value> addFrontOf(Node node){
-        node.next=this;
-        this.prev=node;
-        return node;
-    }
-    public boolean deleteMe(){
-        if(this.next!=null){
-            this.next.prev=this.prev;
-        }
-        else if(this.prev!=null){
-            this.prev.next=this.next;
-        }
-        else {
-            return true;
-        }
-        return false;
-    }
-}
 
 
