@@ -1,6 +1,10 @@
 package com.noReasonException.mylibs.datastruct.Implementations;
 
 public class OrderedLinkedList<Key extends Comparable<Key>,Value> extends LinkedListSymbolTable<Key,Value> {
+    /***
+     * This version of put implements the ordered linked list , for every node Xn
+     *                              Immplies that Xn-1.key<Xn.key<Xn+1.key
+     */
     @Override
     public void put(Key key, Value val) {
         size+=1;

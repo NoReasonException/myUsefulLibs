@@ -80,20 +80,61 @@ public class LinkedListSymbolTable <Key extends Comparable<Key>,Value> extends A
 
         }
     }
+
+    /***
+     *
+     * @return the maximum key
+     */
     @Override
     public Key max (){ return getAsCollection().stream().map(n->{return n.key;}).max(Comparator.naturalOrder()).get(); }
+
+    /***
+     *
+     * @return the minumum key
+     */
     @Override
     public Key min (){return getAsCollection().stream().map(n->{return n.key;}).min(Comparator.naturalOrder()).get(); }
+
+    /***
+     * Returns the biggest actual key , witch is smaller or equal the given key
+     * @param key the key to compare
+     * @return the floor value
+     */
     @Override
     public Key floor   (Key key){throw new RuntimeException();}
+
+    /***
+     *
+     * @param i the key ordering..
+     * @return the key who belongs in this rank
+     */
     @Override
     public Key select  (int i){return getAsCollection().get(i).key;}
+
+    /***
+     * Returns the lowest actual key , witch is biggest or equal the given key
+     * @param key the key to compare
+     * @return
+     */
     @Override
     public Key ceiling (Key key){throw new RuntimeException();}
     @Override
+    /***
+     * Amount of nodes existing in data structure
+     */
     public int size (){return this.size;}
     @Override
+    /***
+     * returns the rank of given key (the ordering)
+     */
     public int rank (Key key){return getAsCollection().indexOf(getNode(key));}
+
+    /***
+     * get all keys between lo and hi
+     * @param lo the first key
+     * @param hi the last key
+     * @return
+     */
     @Override
     public Iterable<Key>  keys    (Key lo,Key hi){
         return new Iterable<Key>() {
