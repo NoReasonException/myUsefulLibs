@@ -5,17 +5,13 @@ import com.sun.istack.internal.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.stream.Stream;
 
 public class LinkedListSymbolTable <Key extends Comparable<Key>,Value> extends AbstractSymbolTable<Key,Value> {
     Node<Key,Value> head;
     Node<Key,Value> lastEdited;
     int  size=0;
-
-
-    public Node<Key, Value> getHead() {
-        return head;
-    }
     /***
      * Utillity method , gets the key , return the node of the list!
      * @param k the key to search
@@ -100,11 +96,58 @@ public class LinkedListSymbolTable <Key extends Comparable<Key>,Value> extends A
     public int rank (Key key){return getAsCollection().indexOf(getNode(key));}
     @Override
     public Iterable<Key>  keys    (Key lo,Key hi){
-        return rangeOf(lo,hi).map((a)->{return a.key;})::iterator;
+        return new Iterable<Key>() {
+            @Override
+            public Iterator<Key> iterator() {
+                return rangeOf(lo,hi).map((a)->{return a.key;}).iterator();
+            }
+        };
     }
 
 
+    class Node<Key extends Comparable<Key>,Value> extends AbstractKeyValueNode<Key,Value>{
 
+
+        Node<Key,Value>    next;
+        Node <Key,Value>   prev;
+        public Node(Key key, Value value) {
+            super(key,value);
+
+        }
+        public Node<Key,Value> goNext(){return this.next;}
+        public Node<Key,Value> goPrev(){return this.prev;}
+
+        public Node<Key,Value> addFrontOf(Node<Key,Value> node) {
+
+            this.prev=node;
+            node.next=this;
+            return node;
+        }
+        public Node<Key,Value> addMid(Node<Key,Value> node) {
+
+            Node<Key,Value> m = this.next;
+            this.next=node;
+            node.prev=this;
+            node.next=m;
+            if(m!=null){
+                node.next=m;
+                m.prev=node;
+            }
+            return node;
+        }
+        public boolean deleteMe(){
+            if(this.next!=null){
+                this.next.prev=this.prev;
+            }
+            else if(this.prev!=null){
+                this.prev.next=this.next;
+            }
+            else {
+                return true;
+            }
+            return false;
+        }
+    }
 }
 
 

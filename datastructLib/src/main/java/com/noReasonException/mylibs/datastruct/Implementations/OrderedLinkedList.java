@@ -10,7 +10,10 @@ public class OrderedLinkedList<Key extends Comparable<Key>,Value> extends Linked
             head=lastEdited=newn;
             return;
         }
-        else if((lastEdited=getNode(key))!=null)lastEdited.value=val;
+        else if((lastEdited=getNode(key))!=null){
+            lastEdited.value=val;
+            return;
+        }
         if(key.compareTo(head.key)==-1){
             head=head.addFrontOf(newn);
             return;
